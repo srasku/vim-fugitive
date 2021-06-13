@@ -1,0 +1,99 @@
+Execute (Git on unmodified repo):
+  echomsg '==== Start Gstatus Test ===='
+  let g:fugitive_orig_test_dir = getcwd()
+  !rm -rf vader-clone
+  Git clone . vader-clone
+  cd vader-clone
+  edit .
+  Git
+  AssertNotEqual -1, match(execute('set ft'), 'filetype=fugitive')
+  AssertEqual g:fugitive_orig_test_dir . '/vader-clone', getcwd()
+
+Expect (empty file):
+  Head: vader-test
+  Merge: origin/vader-test
+  Help: g?
+
+Execute (Git with added file):
+  !cp autoload/fugitive.vim foo
+  Log "Check that foo exists"
+  AssertEqual 1, filereadable('foo')
+  Git add foo
+  Git
+  AssertNotEqual -1, match(execute('set ft'), 'filetype=fugitive')
+  AssertEqual g:fugitive_orig_test_dir . '/vader-clone', getcwd()
+
+Expect (added file):
+  Head: vader-test
+  Merge: origin/vader-test
+  Help: g?
+  
+  Staged (1)
+  A foo
+Execute (Git with removed file):
+  Git rm autoload/fugitive.vim
+  edit .
+  Git
+
+Expect (removed file):
+  Head: vader-test
+  Merge: origin/vader-test
+  Help: g?
+  
+  Staged (1)
+  R autoload/fugitive.vim -> foo
+Execute (Git with missing file):
+  !rm doc/fugitive.txt
+  edit .
+  Git
+  AssertNotEqual -1, match(execute('set ft'), 'filetype=fugitive')
+  AssertEqual g:fugitive_orig_test_dir . '/vader-clone', getcwd()
+
+Expect (missing file):
+  Head: vader-test
+  Merge: origin/vader-test
+  Help: g?
+  
+  Unstaged (1)
+  D doc/fugitive.txt
+  
+  Staged (1)
+  R autoload/fugitive.vim -> foo
+Execute (Git with untracked file):
+  !touch untracked
+  edit .
+  Git
+  AssertNotEqual -1, match(execute('set ft'), 'filetype=fugitive')
+
+Expect (untracked file):
+  Head: vader-test
+  Merge: origin/vader-test
+  Help: g?
+  
+  Untracked (1)
+  ? untracked
+  
+  Unstaged (1)
+  D doc/fugitive.txt
+  
+  Staged (1)
+  R autoload/fugitive.vim -> foo
+Do (select foo):
+  " Last line is 'foo'.
+  L
+  \<Return>
+Expect (foo contents):
+  foo should not be empty
+Then (foo opens):
+  Log 'Filetype should not be "fugitive"'
+  AssertEqual -1, match(execute('set ft'), 'filetype=fugitive')
+  AssertEqual 'foo', expand('%')
+  
+Execute (cleanup):
+  execute 'chdir ' . g:fugitive_orig_test_dir
+  !rm -rf vader-clone
+  unlet g:fugitive_orig_test_dir
+
+Then (directory has been removed):
+  Log 'Checking whether vader-clone directory has been deleted.'
+  AssertEqual 0, isdirectory('vader-clone')
